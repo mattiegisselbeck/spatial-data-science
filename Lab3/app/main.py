@@ -1,28 +1,96 @@
-import os
-import sqlalchemy
-import numpy as np
+
 from flask import Flask, request
-from datetime import datetime
-import json
+import os
+from sqldatabase import SQLDatabase       
 
-from arcgis.gis import GIS
+# Set Vars for Formatting
+start_str = """{"type": "FeatureCollection", "features": """
+end_str = "}"
 
+db = SQLDatabase(host='34.133.121.12', user='postgres', password='student', database='lab3', port='5432')
+
+# Set Up Flask App
 app = Flask(__name__)
 
-@app.route('/post-map', methods=['POST'])
-def post_map():
-    # get data from POST request
-    data = request.get_data()
-    # process data and create map file
-    # ...
+# Define Routes
+@app.route("/")
+def home():
+    return "GIS 5572: ArcGIS II - Spatial Prediection (Mattie Gisselbeck)"
 
-    # upload map to ArcGIS Online
-    gis = GIS()
-    item_properties = {'title': 'My Map', 'type': 'Web Map'}
-    map_item = gis.content.add(item_properties, data='path/to/mapfile')
-    map_item.share(everyone=True)
-    return map_item.url
 
-if __name__ == '__main__':
-    app.run()
+@app.route("/temperature_predictive_analysis_map")
+def temperature_predictive_analysis():
 
+    # Make Connection
+    db.connect()
+
+    # Query
+    q = "SELECT JSON_AGG(ST_AsGeoJSON(idw_dem_error_estimation)) FROM idw_dem_error_estimation;"
+
+    # Formatting
+    q_out = str(db.query(q)[0][0]).replace("'", "")
+
+    # Close Connection
+    db.close()
+
+    # Return GeoJSON Result
+    return start_str + q_out + end_str
+
+
+@app.route("/temperature_interpolation_map")
+def temperature_interpolation():
+
+    # Make Connection
+    db.connect()
+
+    # Query
+    q = "SELECT JSON_AGG(ST_AsGeoJSON(idw_dem)) FROM idw_dem;"
+
+    # Formatting
+    q_out = str(db.query(q)[0][0]).replace("'", "")
+
+    # Close Connection
+    db.close()
+
+    # Return GeoJSON Result
+    return start_str + q_out + end_str
+
+
+@app.route("/Elevation_Predictive_Analysis_Map")
+def elevation_predictive_analysis_map():
+    # Make Connection
+    db.connect()
+
+    # Query
+    q = "SELECT JSON_AGG(ST_AsGeoJSON(tmp_ebk_error_estimation)) FROM tmp_ebk_error_estimation;"
+
+    # Formatting
+    q_out = str(db.query(q)[0][0]).replace("'", "")
+
+    # Close Connection
+    db.close()
+
+    # Return GeoJSON Result
+    return start_str + q_out + end_str
+
+
+@app.route("/Elevation_Interpolation_Map")
+def elevation():
+    # Make Connection
+    db.connect()
+
+    # Query
+    q = "SELECT JSON_AGG(ST_AsGeoJSON(tmp_ebk)) FROM tmp_ebk;"
+
+    # Formatting
+    q_out = str(db.query(q)[0][0]).replace("'", "")
+
+    # Close Connection
+    db.close()
+
+    # Return GeoJSON Result
+    return start_str + q_out + end_str
+
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
